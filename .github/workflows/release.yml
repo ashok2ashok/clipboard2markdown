@@ -29,21 +29,35 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      # ── 2. Bump patch version in package.json ──────────────────────────
+      # ── 2. Bump patch version from latest git tag (not package.json) ──────
+      #    Deriving from the tag means force-pushes / out-of-sync package.json
+      #    never cause "tag already exists" failures.
       - name: Bump version
         id: ver
         run: |
-          current=$(node -p "require('./package.json').version")
+          git fetch --tags
+          latest=$(git tag -l 'v*' | sort -V | tail -1)
+          latest=${latest:-v1.0.0}
+          current=${latest#v}
           IFS='.' read -ra parts <<< "$current"
           new_version="${parts[0]}.${parts[1]}.$((${parts[2]} + 1))"
+          new_tag="v$new_version"
+
+          # Safety: if tag somehow already exists, keep incrementing
+          while git rev-parse "$new_tag" >/dev/null 2>&1; do
+            parts[2]=$((${parts[2]} + 1))
+            new_version="${parts[0]}.${parts[1]}.${parts[2]}"
+            new_tag="v$new_version"
+          done
+
           node -e "
             const fs = require('fs');
             const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
             pkg.version = '$new_version';
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
           "
-          echo "version=$new_version" >> "$GITHUB_OUTPUT"
-          echo "tag=v$new_version"    >> "$GITHUB_OUTPUT"
+          echo "version=$new_version" >> "\$GITHUB_OUTPUT"
+          echo "tag=$new_tag"         >> "\$GITHUB_OUTPUT"
 
       # ── 3. Commit version bump (skip ci prevents re-triggering) ────────
       - name: Commit and tag
