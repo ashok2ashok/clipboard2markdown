@@ -4,7 +4,9 @@
 
 **[Live demo →](https://ashok2ashok.github.io/clipboard2markdown/)**
 
-![Screencast](screencast.gif)
+![Landing page](screenshot-home.png)
+
+![App view](screenshot-app.png)
 
 ---
 
