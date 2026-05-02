@@ -185,6 +185,9 @@
     Object.keys(FLAVORS).map(k => [k, buildConverter(k)])
   );
 
+  // ─── Mobile detection ─────────────────────────────────────────────────────
+  const isMobile = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+
   // ─── DOM refs ─────────────────────────────────────────────────────────────
   const pastebin     = document.getElementById('pastebin');
   const output       = document.getElementById('output');
@@ -256,7 +259,63 @@
     }
   });
 
-  // ─── Paste capture ────────────────────────────────────────────────────────
+  // ─── Process pasted HTML ──────────────────────────────────────────────────
+  function processHtml(html) {
+    if (!html) return;
+    currentHtml = html;
+    htmlSource.textContent = html;
+    showApp();
+    output.value = convert(html);
+    updatePreview();
+    output.focus();
+    output.select();
+  }
+
+  // ─── Paste via Clipboard API (mobile) ────────────────────────────────────
+  async function pasteFromClipboard() {
+    if (navigator.clipboard && navigator.clipboard.read) {
+      try {
+        const items = await navigator.clipboard.read();
+        for (const item of items) {
+          if (item.types.includes('text/html')) {
+            const blob = await item.getType('text/html');
+            processHtml(await blob.text());
+            return;
+          }
+          if (item.types.includes('text/plain')) {
+            const blob = await item.getType('text/plain');
+            const text = (await blob.text()).trim();
+            if (text) processHtml('<p>' + text.replace(/\n{2,}/g, '</p><p>').replace(/\n/g, '<br>') + '</p>');
+            return;
+          }
+        }
+      } catch {
+        // Permission denied or API unavailable — fall through to paste zone
+      }
+    }
+    // Fallback: focus the visible paste zone so the user can long-press → Paste
+    const zone = document.getElementById('mobile-paste-zone');
+    if (zone) zone.focus();
+  }
+
+  // ─── Mobile paste zone (long-press → native paste) ───────────────────────
+  const mobilePasteZone = document.getElementById('mobile-paste-zone');
+  if (mobilePasteZone) {
+    mobilePasteZone.addEventListener('paste', e => {
+      e.preventDefault();
+      const cd  = e.clipboardData;
+      const html = cd.getData('text/html');
+      const text = cd.getData('text/plain').trim();
+      mobilePasteZone.textContent = '';
+      if (html) {
+        processHtml(html);
+      } else if (text) {
+        processHtml('<p>' + text.replace(/\n{2,}/g, '</p><p>').replace(/\n/g, '<br>') + '</p>');
+      }
+    });
+  }
+
+  // ─── Paste capture (desktop keyboard shortcut) ────────────────────────────
   document.addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
       pastebin.innerHTML = '';
@@ -268,16 +327,7 @@
     setTimeout(() => {
       const html = pastebin.innerHTML;
       pastebin.innerHTML = '';
-      if (!html) return;
-
-      currentHtml = html;
-      htmlSource.textContent = html;
-
-      showApp();
-      output.value = convert(html);
-      updatePreview();
-      output.focus();
-      output.select();
+      processHtml(html);
     }, 0);
   });
 
@@ -313,4 +363,54 @@
     document.documentElement.setAttribute('data-bs-theme', dark ? 'dark' : 'light');
   applyTheme(mq.matches);
   mq.addEventListener('change', e => applyTheme(e.matches));
+
+  // ─── Mobile UI setup ──────────────────────────────────────────────────────
+  function setupMobileUI() {
+    if (!isMobile) return;
+
+    const stepCopy  = document.getElementById('step-copy');
+    const stepPaste = document.getElementById('step-paste');
+    if (stepCopy)  stepCopy.innerHTML  = 'Copy rich text anywhere (long-press → <strong>Copy</strong>)';
+    if (stepPaste) stepPaste.innerHTML = 'Tap <strong>Paste from Clipboard</strong> below';
+
+    document.getElementById('btn-mobile-paste')    ?.classList.remove('d-none');
+    document.getElementById('mobile-paste-zone')   ?.classList.remove('d-none');
+    document.getElementById('btn-mobile-paste-app')?.classList.remove('d-none');
+  }
+
+  // ─── On-load clipboard detection (mobile, permission already granted) ─────
+  async function checkClipboardOnLoad() {
+    if (!isMobile || !navigator.permissions || !navigator.clipboard?.read) return;
+    try {
+      const perm = await navigator.permissions.query({ name: 'clipboard-read' });
+      if (perm.state !== 'granted') return;
+      const items = await navigator.clipboard.read();
+      const hasContent = items.some(item =>
+        item.types.includes('text/html') || item.types.includes('text/plain')
+      );
+      if (!hasContent) return;
+      const banner = document.getElementById('clipboard-banner');
+      if (banner) banner.classList.remove('d-none');
+    } catch {
+      // Silently ignore — permission API or clipboard unavailable
+    }
+  }
+
+  // ─── Mobile button wiring ─────────────────────────────────────────────────
+  const clipboardBanner   = document.getElementById('clipboard-banner');
+  const btnMobilePaste    = document.getElementById('btn-mobile-paste');
+  const btnMobilePasteApp = document.getElementById('btn-mobile-paste-app');
+  const btnBannerPaste    = document.getElementById('btn-banner-paste');
+  const btnBannerDismiss  = document.getElementById('btn-banner-dismiss');
+
+  btnMobilePaste   ?.addEventListener('click', pasteFromClipboard);
+  btnMobilePasteApp?.addEventListener('click', pasteFromClipboard);
+  btnBannerPaste   ?.addEventListener('click', () => {
+    clipboardBanner?.classList.add('d-none');
+    pasteFromClipboard();
+  });
+  btnBannerDismiss ?.addEventListener('click', () => clipboardBanner?.classList.add('d-none'));
+
+  setupMobileUI();
+  checkClipboardOnLoad();
 })();

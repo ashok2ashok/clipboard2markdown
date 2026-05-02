@@ -186,6 +186,51 @@
 
     kbd { font-size: 0.75em; }
 
+    /* ── Mobile paste zone ──────────────────────────────────────────────── */
+    #mobile-paste-zone {
+      min-height: 48px;
+      border: 2px dashed var(--bs-border-color);
+      border-radius: 8px;
+      padding: 0.6rem 1rem;
+      font-size: 0.875rem;
+      cursor: text;
+      transition: border-color 0.15s;
+      outline: none;
+      max-width: 360px;
+      width: 100%;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #mobile-paste-zone:focus {
+      border-color: var(--bs-primary);
+      border-style: solid;
+    }
+    #mobile-paste-zone:empty::before {
+      content: 'or long-press here → tap Paste';
+      color: var(--bs-secondary-color);
+      pointer-events: none;
+    }
+
+    /* ── Clipboard detection banner ─────────────────────────────────────── */
+    #clipboard-banner {
+      position: fixed;
+      top: 0.75rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1050;
+      border-radius: 0.5rem;
+      padding: 0.5rem 0.875rem;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+      max-width: calc(100vw - 2rem);
+      touch-action: manipulation;
+    }
+
     #btn-copy.copied {
       --bs-btn-color: #fff;
       --bs-btn-bg: #198754;
@@ -194,6 +239,13 @@
   </style>
 </head>
 <body>
+
+  <!-- ── Clipboard detection banner (mobile) ─────────────────────────────── -->
+  <div id="clipboard-banner" class="d-none bg-primary text-white">
+    <span>Clipboard has content</span>
+    <button id="btn-banner-paste" class="btn btn-sm btn-light py-0">Paste &amp; Convert</button>
+    <button id="btn-banner-dismiss" class="btn btn-sm btn-link text-white p-0 lh-1 ms-1" aria-label="Dismiss" style="font-size:1rem;">✕</button>
+  </div>
 
   <!-- ── GitHub icon (always visible, bottom-right) ────────────────────── -->
   <a href="https://github.com/ashok2ashok/clipboard2markdown"
@@ -216,10 +268,20 @@
     <h1>clipboard2markdown</h1>
     <p class="subtitle">Convert rich text to Markdown instantly.</p>
     <ol>
-      <li>Copy rich text anywhere (<code>Ctrl+C</code> / <code>⌘C</code>)</li>
-      <li>Paste into this window (<code>Ctrl+V</code> / <code>⌘V</code>)</li>
+      <li id="step-copy">Copy rich text anywhere (<code>Ctrl+C</code> / <code>⌘C</code>)</li>
+      <li id="step-paste">Paste into this window (<code>Ctrl+V</code> / <code>⌘V</code>)</li>
       <li>Markdown appears — already selected for copying</li>
     </ol>
+    <button id="btn-mobile-paste" class="btn btn-primary btn-lg d-none mt-3" style="touch-action:manipulation;min-width:220px;">
+      Paste from Clipboard
+    </button>
+    <div id="mobile-paste-zone"
+         class="d-none mt-2"
+         contenteditable="true"
+         tabindex="0"
+         role="textbox"
+         aria-label="Long-press paste zone"
+         aria-multiline="false"></div>
   </div>
 
   <!-- ── App view ──────────────────────────────────────────────────────── -->
@@ -232,6 +294,7 @@
         <span class="text-muted small d-none d-lg-inline">
           Paste again to replace &nbsp;<kbd>Ctrl+V</kbd> / <kbd>⌘V</kbd>
         </span>
+        <button id="btn-mobile-paste-app" class="btn btn-sm btn-outline-primary d-none" title="Paste from clipboard" style="touch-action:manipulation;">Paste</button>
         <select id="flavor-select" class="form-select form-select-sm" style="width: auto;" title="Markdown flavor">
           <option value="gfm">GitHub (GFM)</option>
           <option value="commonmark">CommonMark</option>

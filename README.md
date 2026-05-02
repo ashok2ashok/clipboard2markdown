@@ -12,11 +12,20 @@
 
 ## Usage
 
+### Desktop
 1. Copy formatted text from anywhere (`Ctrl+C` / `⌘C`)
 2. Paste into the app (`Ctrl+V` / `⌘V`)
 3. Markdown appears — already selected, ready to copy
 
 Paste again to replace. Switch flavors to re-convert on the fly.
+
+### Mobile
+1. Long-press text anywhere → **Copy**
+2. Tap **Paste from Clipboard** in the app  
+   *(or long-press in the dashed zone → tap **Paste**)*
+3. Markdown appears — tap **Copy** to grab it
+
+If the app detects clipboard content on load, a banner appears to paste with one tap.
 
 ---
 
@@ -27,6 +36,7 @@ Paste again to replace. Switch flavors to re-convert on the fly.
 - **Prettify** — normalizes heading spacing, collapses blank lines, trims trailing whitespace
 - **Raw HTML accordion** — inspect the original pasted HTML below the editor
 - **Dark mode** — follows system preference automatically
+- **Mobile support** — tap button to paste via Clipboard API, or long-press the paste zone; auto-detects clipboard content on load
 - **No server** — runs entirely in the browser
 
 ---
