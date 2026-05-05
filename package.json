@@ -1,6 +1,6 @@
 {
   "name": "clipboard2markdown",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Paste rich text, get clean Markdown. Browser-based converter with live preview and multiple markdown flavors.",
   "keywords": [
     "markdown",
