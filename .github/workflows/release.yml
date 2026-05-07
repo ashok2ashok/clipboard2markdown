@@ -84,8 +84,9 @@ jobs:
       - name: Prepare dist
         run: |
           mkdir dist
-          cp index.html clipboard2markdown.js styles.css favicon.ico \
+          cp index.html app.js styles.css favicon.ico \
              background.svg background-dark.svg dist/
+          cp -r shared tools dist/
 
       # ── 6. Upload Pages artifact ───────────────────────────────────────
       - name: Upload Pages artifact
